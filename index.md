@@ -2,26 +2,18 @@
 
 Hi, my name is Jonas Theiler. I am new on GitHub. 
 
-### Markdown
-
-Markdown is a lightweight and easy-to-use syntax for styling your writing. It includes conventions for
 
 ```markdown
-Syntax highlighted code block
+Name: Jonas Theiler
 
-# Header 1
-## Header 2
-### Header 3
+Age: 27
 
-- Bulleted
-- List
+E-mail: jonas_theiler@hotmail.com
 
-1. Numbered
-2. List
+Education:
+  - 2017 - 2019, Master of Science in Mathematics, University of Bern
+  - 2013 - 2017, Bachelor of Science in Mathematics, Minor Geography, Unversity of Bern
 
-**Bold** and _Italic_ and `Code` text
-
-[Link](url) and ![Image](src)
 ```
 
 For more details see [GitHub Flavored Markdown](https://guides.github.com/features/mastering-markdown/).
