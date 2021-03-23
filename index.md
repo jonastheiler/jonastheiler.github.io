@@ -1,10 +1,10 @@
 ---
 layout: page
-title: ""
+title: "About me"
 ---
 
 
-# About me
+# Profile
 
 Hi, my name is Jonas Theiler. I am new on GitHub. I am Mathematician and Data Enthusiast. 
 
