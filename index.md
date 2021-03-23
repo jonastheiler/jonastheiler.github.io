@@ -1,3 +1,4 @@
+![Jonas_Theiler](https://user-images.githubusercontent.com/80971809/112206002-b7c0cd80-8c15-11eb-85e4-e0ce6bf05f52.jpg)
 ---
 layout: page
 title: "About me"
