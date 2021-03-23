@@ -1,6 +1,6 @@
 ## About me
 
-Hi, my name is Jonas Theiler. I am new on GitHub. 
+Hi, my name is Jonas Theiler. I am new on GitHub. I am Mathematician and Data Enthusiast. 
 
 
 ```markdown
