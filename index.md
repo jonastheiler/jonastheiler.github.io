@@ -1,4 +1,3 @@
-
 ---
 layout: page
 title: "About me"
@@ -10,7 +9,7 @@ title: "About me"
 
 I am Mathematician and Data Enthusiast. 
 
-<img align="left" width="130" src="https://user-images.githubusercontent.com/80971809/112206002-b7c0cd80-8c15-11eb-85e4-e0ce6bf05f52.jpg">
+<img align="right" width="130" src="https://user-images.githubusercontent.com/80971809/112206002-b7c0cd80-8c15-11eb-85e4-e0ce6bf05f52.jpg">
 
 
 ```markdown
