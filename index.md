@@ -23,7 +23,7 @@ Interests:
 ```
 
 
-### Education
+#### Education
 ---
 
   - 2017 - 2019, Master of Science in Mathematics, University of Bern
