@@ -24,6 +24,7 @@ Interests:
 
 
 ### Education
+---
 
   - 2017 - 2019, Master of Science in Mathematics, University of Bern
   - 2013 - 2017, Bachelor of Science in Mathematics, Minor Geography, Unversity of Bern
