@@ -5,6 +5,18 @@
 	html5up.net | @ajlkn
 	Free for personal and commercial use under the CCA 3.0 license (html5up.net/license)
 */
+
+.about {
+  padding: 125px 0;
+  -webkit-transition: background-color ease 0.3s, color ease 0.3s;
+  transition: background-color ease 0.3s, color ease 0.3s;
+  background-color: #F9F2E8;
+  background-image: url(/svg/design.svg);
+  background-repeat: repeat-y;
+  background-attachment: fixed;
+  color: #222222;
+}
+
 .avatar {
   border-radius: 50%;
 }
