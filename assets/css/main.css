@@ -34,25 +34,6 @@ footer, header, hgroup, menu, nav, section {
 body {
   line-height: 1; }
 
-body.light-mode {
-  background-color: #FFFCF9;
-}
-
-body.light-mode .about {
-  -webkit-transition: background-color ease 0.3s, color ease 0.3s;
-  transition: background-color ease 0.3s, color ease 0.3s;
-  background-color: #F9F2E8;
-  background-image: url(/svg/design.svg);
-  background-repeat: repeat-y;
-  background-attachment: fixed;
-  color: #222222;
-}
-
-body.light-mode .about h1 {
-  -webkit-text-decoration-color: #E4C0C3;
-          text-decoration-color: #E4C0C3;
-}
-
 ol, ul {
   list-style: none; }
 
@@ -1621,6 +1602,7 @@ button,
 
 /* Features */
 .features {
+  background-color: #F9F2E8;
   display: -moz-flex;
   display: -webkit-flex;
   display: -ms-flex;
