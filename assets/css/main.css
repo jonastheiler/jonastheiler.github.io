@@ -1602,13 +1602,6 @@ button,
 
 /* Features */
 .features {
-   -webkit-transition: background-color ease 0.3s, color ease 0.3s;
-  transition: background-color ease 0.3s, color ease 0.3s;
-  background-color: #F9F2E8;
-  background-image: url(/svg/design.svg);
-  background-repeat: repeat-y;
-  background-attachment: fixed;
-  color: #222222;
   display: -moz-flex;
   display: -webkit-flex;
   display: -ms-flex;
