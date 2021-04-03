@@ -34,6 +34,10 @@ footer, header, hgroup, menu, nav, section {
 body {
   line-height: 1; }
 
+body.light-mode {
+  background-color: #FFFCF9;
+}
+
 body.light-mode .about {
   -webkit-transition: background-color ease 0.3s, color ease 0.3s;
   transition: background-color ease 0.3s, color ease 0.3s;
