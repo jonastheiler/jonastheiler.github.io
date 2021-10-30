@@ -1776,7 +1776,7 @@ button,
       margin: 0 0 2em 0; }
       .posts article .image img {
         display: block;
-        width: 100%; }
+        /*width: 100%;*/ }
   @media screen and (min-width: 1681px) {
     .posts article:nth-child(3n + 1):before {
       display: none; }
