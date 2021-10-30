@@ -1219,7 +1219,9 @@ input[type="radio"] + label:before {
   border-radius: 0.375em;
   border: 0;
   display: inline-block;
-  position: relative; }
+  position: relative;
+  margin-left: auto;
+  margin-right: auto; }
   .image img {
     border-radius: 0.375em;
     display: block; }
