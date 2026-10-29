@@ -3,6 +3,7 @@
 // `backticks` in an answer render as code.
 const LUCERNE = "https://github.com/jonastheiler/lucerne_temp/blob/main/";
 const AVALANCHE = "https://github.com/jonastheiler/avalanche-llm/blob/main/";
+const SHINY = "https://github.com/jonastheiler/shiny-k8s-lab/blob/main/";
 
 const CARDS = [
   {
@@ -160,5 +161,83 @@ const CARDS = [
     q: "Fine-tuned Qwen ties Haiku at about the same cost per 1,000 bulletins. So when is the small model the better choice?",
     a: "When control matters: it runs on your own hardware, the data never leaves it, and it doesn't depend on an API. Here the 1,000 labels were free, because SLF publishes the structured fields. On most tasks they would have to be labelled by hand, and that would be the main cost of the small-model route. The project gives a rough budget: about 1,000 examples.",
     link: AVALANCHE + "README.md#what-the-results-show",
+  },
+  {
+    repo: "shiny-k8s-lab",
+    q: "Why does the Dockerfile install the R packages before copying in the app code?",
+    a: "Each instruction is a cached layer, and a change invalidates its layer and every one after it. Packages change rarely and take about ten minutes to install; the app code changes often. With the packages first, a change to `ui.R` reuses the package layer and rebuilds in about a minute. In CI, every runner starts empty, so the layers are kept in the GitHub Actions cache between runs.",
+    link: SHINY + "app/Dockerfile#L53-L75",
+  },
+  {
+    repo: "shiny-k8s-lab",
+    q: "Why does the app connect to `postgres-service` instead of the Postgres pod's IP?",
+    a: "A pod gets a new IP every time it is replaced. A Service has a stable virtual IP and a DNS name that CoreDNS resolves inside the cluster, and it forwards to whichever ready pods match its label selector (`app: postgres`). Its type is ClusterIP, so the database is reachable only from inside the cluster.",
+    link: SHINY + "k8s/postgres/04-service.yaml#L31-L54",
+  },
+  {
+    repo: "shiny-k8s-lab",
+    q: "The database password is in a Kubernetes Secret. Is it encrypted?",
+    a: "No. Secret values are only base64-encoded, and anyone who can read the Secret can decode them. What a Secret adds is separation: credentials live outside the code and the image, and access can be restricted with RBAC. Production setups add encryption at rest for etcd, a secrets manager such as Vault, or Sealed Secrets / SOPS so Secrets can be committed to git safely.",
+    link: SHINY + "k8s/postgres/01-secret.yaml#L10-L15",
+  },
+  {
+    repo: "shiny-k8s-lab",
+    q: "The app's code contains no database host or credentials. How do they get into the container?",
+    a: "`global.R` reads them with `Sys.getenv()`. The Deployment fills those environment variables from the ConfigMap (host, port, database name) and from the Secret (user, password), renaming the Secret's `POSTGRES_USER` to the `DB_USER` the app expects. The same image runs in every environment; only the configuration around it changes.",
+    link: SHINY + "k8s/shiny/06-deployment.yaml#L77-L98",
+  },
+  {
+    repo: "shiny-k8s-lab",
+    q: "Postgres uses the `Recreate` update strategy, the Shiny app `RollingUpdate`. Why the difference?",
+    a: "Postgres is stateful: a rolling update would briefly run two pods writing to the same data directory, which can corrupt it. Recreate stops the old pod first and accepts a short downtime. The Shiny app holds no data, so two versions can run side by side: with `maxSurge: 1` and `maxUnavailable: 0`, the new pod starts, becomes ready, and only then is the old one stopped.",
+    link: SHINY + "k8s/postgres/03-deployment.yaml#L95-L99",
+  },
+  {
+    repo: "shiny-k8s-lab",
+    q: "What is the difference between a liveness and a readiness probe?",
+    a: "A failing liveness probe makes Kubernetes restart the container: it catches a process that is hung. A failing readiness probe only takes the pod out of its Service, so it gets no traffic until it passes again. Readiness is what makes a rolling update free of downtime. A liveness probe that starts too early kills a slow-starting app in a loop, hence the 30-second delay for Shiny.",
+    link: SHINY + "k8s/shiny/06-deployment.yaml#L104-L123",
+  },
+  {
+    repo: "shiny-k8s-lab",
+    q: "CI has pushed a new image to `:latest`. Why does the cluster need `kubectl rollout restart` and `imagePullPolicy: Always` to run it?",
+    a: "The manifest didn't change, so from Kubernetes' point of view the desired state is already reached and there is nothing to do. `rollout restart` changes an annotation in the pod template, which creates a new ReplicaSet and a new pod. `imagePullPolicy: Always` makes that pod pull `:latest` from the registry instead of using the copy already on the node.",
+    link: SHINY + "k8s/shiny/06-deployment.yaml#L60-L67",
+  },
+  {
+    repo: "shiny-k8s-lab",
+    q: "Why doesn't `kubectl rollout undo` roll back to the previous app version here?",
+    a: "Undo restores the previous pod template, but both templates say `:latest`, so the pod pulls the newest image again. Rollbacks need immutable tags. CI also tags each image with its commit SHA, and `kubectl set image ...:<sha>` goes back to an exact build. Production setups pin SHA tags in the manifests, so every deployment is traceable.",
+    link: SHINY + ".github/workflows/build-and-push.yml#L98-L107",
+  },
+  {
+    repo: "shiny-k8s-lab",
+    q: "Building the image is automatic, deploying it is a manual command. Why, and how is that solved in production?",
+    a: "GitHub's runners can't reach a cluster on a laptop, so they can't push a deployment to it. Production setups turn it around with GitOps: a tool like Argo CD or Flux runs inside the cluster, watches git or the registry, and pulls in new versions itself. The cluster then needs no inbound access from CI.",
+    link: SHINY + ".github/workflows/build-and-push.yml#L25-L31",
+  },
+  {
+    repo: "shiny-k8s-lab",
+    q: "The database schema is in `init.sql`. Why does changing it have no effect on a running setup?",
+    a: "The postgres image runs the scripts in `/docker-entrypoint-initdb.d/` only when its data directory is empty, which is on first start. The data lives on a PersistentVolumeClaim and survives pod restarts, so later starts skip the script. Changing the schema means deleting the volume and its data, or writing a migration.",
+    link: SHINY + "k8s/postgres/03-deployment.yaml#L17-L22",
+  },
+  {
+    repo: "shiny-k8s-lab",
+    q: "The app couldn't connect to the database because `DB_HOST` was empty in R, although the pod had it set. What was going on?",
+    a: "The rocker image starts with s6-overlay, whose init script copies the container's environment variables into `Renviron.site`, the file R reads at startup. The container runs as the non-root `shiny` user, so the script couldn't write that file and silently skipped it. R saw no `DB_HOST`, and RPostgres fell back to a local Unix socket. `chmod 666` on the file fixed it.",
+    link: SHINY + "app/Dockerfile#L84-L91",
+  },
+  {
+    repo: "shiny-k8s-lab",
+    q: "Why does the Shiny app use a connection pool instead of one database connection?",
+    a: "With a single connection, concurrent users queue behind each other, and a dropped connection breaks the whole app. A pool keeps a few connections open: each query borrows one and returns it right away, and broken connections are replaced. Opening a new connection per query would avoid both problems but pays the connection setup cost every time.",
+    link: SHINY + "app/global.R#L23-L44",
+  },
+  {
+    repo: "shiny-k8s-lab",
+    q: "What is the difference between resource requests and limits?",
+    a: "Requests are what the scheduler reserves: a pod only lands on a node with that much CPU and memory free. Limits are the ceiling at runtime. A container over its CPU limit is throttled; one over its memory limit is killed (OOMKilled) and restarted. That is why the Shiny app, with R and ggplot2, gets a 1 Gi memory limit.",
+    link: SHINY + "k8s/postgres/03-deployment.yaml#L114-L123",
   },
 ];
