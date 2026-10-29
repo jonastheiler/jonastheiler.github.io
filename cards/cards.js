@@ -2,6 +2,7 @@
 // A plain script rather than JSON, so the page also works when opened from disk.
 // `backticks` in an answer render as code.
 const LUCERNE = "https://github.com/jonastheiler/lucerne_temp/blob/main/";
+const AVALANCHE = "https://github.com/jonastheiler/avalanche-llm/blob/main/";
 
 const CARDS = [
   {
@@ -75,5 +76,89 @@ const CARDS = [
     q: "Why does everything (data, models, reports, forecasts) live in the git repo instead of a database and an API?",
     a: "Forecasts change once a day, so a static `forecasts/latest.json` serves them as well as a web server would. Keeping it all in git means no server, cloud account or secrets, and every change to data, model and score is versioned. Models are saved as LightGBM text files, so a retrain shows up as a readable diff.",
     link: LUCERNE + "src/lucerne_temp/model.py#L116-L121",
+  },
+  {
+    repo: "avalanche-llm",
+    q: "The SLF bulletins contain a `coreZoneText`. Why is it left out of the model input?",
+    a: "It spells out the labels, e.g. \"Danger level 3+ on all aspects above 2000m\". With it in the input, the task becomes copying instead of reading the problem descriptions, and every score would be inflated. Checking each input field for what it reveals about the label is part of preventing leakage.",
+    link: AVALANCHE + "src/avalanche_llm/dataset.py#L66-L68",
+  },
+  {
+    repo: "avalanche-llm",
+    q: "Why split train and test by winter, and drop test bulletins whose text appears in training?",
+    a: "SLF reuses the same text across regions and days. A random split would put copies of a test text into training, so the scores would measure memorisation. Testing on a later winter (25/26) and removing any text seen in training makes every test bulletin new to the model. Texts that appear with different labels are dropped too: no model could get them right.",
+    link: AVALANCHE + "src/avalanche_llm/dataset.py#L81-L98",
+  },
+  {
+    repo: "avalanche-llm",
+    q: "Why is the headline metric type + danger level F1, and not F1 over every field of a problem?",
+    a: "Aspects and elevations are often not in the text at all: the forecasters set them directly. Requiring every field leaves all approaches near zero, so the score can't separate them. Type and level are what the text does describe. F1 balances problems that were missed against problems that were made up.",
+    link: AVALANCHE + "src/avalanche_llm/evaluate.py#L52-L60",
+  },
+  {
+    repo: "avalanche-llm",
+    q: "The bootstrap confidence interval resamples a bulletin together with its translations. Why?",
+    a: "The four language versions of a bulletin are not independent examples: a model that gets one right tends to get all four right. Resampling 1,200 rows as if independent would make the interval look narrower than it is. Resampling the 300 bulletins as groups keeps that dependence, giving about ±0.03.",
+    link: AVALANCHE + "src/avalanche_llm/evaluate.py#L98-L118",
+  },
+  {
+    repo: "avalanche-llm",
+    q: "Qwen3-1.7B without fine-tuning scores exactly 0, while Haiku always returns valid JSON. Why the difference?",
+    a: "Haiku is called with structured outputs (a JSON schema in `output_config`), so its answer is constrained to the schema. Qwen gets the same instructions but no such constraint, and answers in a list format instead of JSON. An answer that doesn't parse counts as a bulletin with no problems, so every true problem is missed. Fine-tuning on 100 examples is enough to teach the format.",
+    link: AVALANCHE + "src/avalanche_llm/evaluate.py#L23-L41",
+  },
+  {
+    repo: "avalanche-llm",
+    q: "The keyword baseline finds problem types almost as well as Haiku (F1 0.746 vs 0.796), but its danger level is right only a third of the time. What does that show?",
+    a: "The problem type is named in the text (\"Triebschnee\", \"wet snow\"), so keywords find it. The danger level has to be inferred from how the situation is described, and the rules can only fill in the most frequent level for that type. The level is where a language model earns its cost.",
+    link: AVALANCHE + "src/avalanche_llm/baseline.py#L55-L80",
+  },
+  {
+    repo: "avalanche-llm",
+    q: "The calibrated prompt was clearly better on the validation set, but on the test set its gain wasn't significant. How can that happen?",
+    a: "Three prompts were compared on the same 400 validation bulletins and the best one was kept. Picking the winner of several noisy scores favours the one that was lucky on that sample, so its validation score is biased upwards. The untouched test set gives the honest estimate. This is why the prompt was frozen before the test run.",
+    link: AVALANCHE + "src/avalanche_llm/frontier.py#L57-L68",
+  },
+  {
+    repo: "avalanche-llm",
+    q: "What does LoRA train, and why does it make fine-tuning a 1.7B model possible on a free T4?",
+    a: "The original weights stay frozen. Next to each linear layer, LoRA trains two small matrices whose product, a rank-16 update, is added to the layer's output. Here that is about 17M trainable weights, roughly 1% of the model. Gradients and Adam's optimizer state are only needed for those, which is what makes it fit in 16 GB.",
+    link: AVALANCHE + "src/avalanche_llm/finetune.py#L24-L30",
+  },
+  {
+    repo: "avalanche-llm",
+    q: "Why are the prompt tokens labelled -100 during fine-tuning?",
+    a: "-100 is the index PyTorch's cross-entropy ignores. The loss then covers only the JSON answer, so the model learns to produce answers, not to reproduce the system prompt, which is the same in every example and would otherwise dominate the loss.",
+    link: AVALANCHE + "src/avalanche_llm/finetune.py#L55-L60",
+  },
+  {
+    repo: "avalanche-llm",
+    q: "Training uses batches of 8 bulletins but feeds them through the model 2 at a time. Why, and why is each loss multiplied by len(micro) / len(batch)?",
+    a: "The logits hold a score for each of Qwen's 152k tokens at every position, and for 8 bulletins at once they don't fit in memory. Gradient accumulation runs the micro-batches one after another and adds up their gradients before a single optimizer step. Weighting each micro-batch's mean loss by its share of the batch makes that sum (about) the gradient of the whole batch.",
+    link: AVALANCHE + "src/avalanche_llm/finetune.py#L81-L109",
+  },
+  {
+    repo: "avalanche-llm",
+    q: "On a T4, training runs in float16 with a GradScaler, but the LoRA weights are kept in float32. Why both?",
+    a: "A T4 has no bfloat16, and float16 has a narrow range: small gradients round to zero. The GradScaler multiplies the loss before the backward pass and divides the gradients again before the step. The LoRA weights stay in float32 because an optimizer update is often tiny compared to the weight, and in float16 it would be rounded away.",
+    link: AVALANCHE + "src/avalanche_llm/finetune.py#L73-L75",
+  },
+  {
+    repo: "avalanche-llm",
+    q: "Batched generation needs left padding and the KV cache. What does each do?",
+    a: "Generation appends new tokens at the right end of each row. With right padding, the padding would sit between the prompt and the answer, so prompts are padded on the left. The KV cache stores the keys and values of all earlier tokens, so each new token only computes itself instead of the whole text again. Training had switched it off for gradient checkpointing.",
+    link: AVALANCHE + "src/avalanche_llm/finetune.py#L112-L130",
+  },
+  {
+    repo: "avalanche-llm",
+    q: "Why is each training set the first n bulletins of one shuffle, so that 100 ⊂ 300 ⊂ 1,000?",
+    a: "The learning curve should show the effect of more data. With independent draws, each size would also get a different, randomly easier or harder set of examples, and that noise would mix into the curve. With nested sets, the larger set only adds examples.",
+    link: AVALANCHE + "src/avalanche_llm/finetune.py#L39-L43",
+  },
+  {
+    repo: "avalanche-llm",
+    q: "Fine-tuned Qwen ties Haiku at about the same cost per 1,000 bulletins. So when is the small model the better choice?",
+    a: "When control matters: it runs on your own hardware, the data never leaves it, and it doesn't depend on an API. Here the 1,000 labels were free, because SLF publishes the structured fields. On most tasks they would have to be labelled by hand, and that would be the main cost of the small-model route. The project gives a rough budget: about 1,000 examples.",
+    link: AVALANCHE + "README.md#what-the-results-show",
   },
 ];
