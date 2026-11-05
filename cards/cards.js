@@ -4,6 +4,7 @@
 const LUCERNE = "https://github.com/jonastheiler/lucerne_temp/blob/main/";
 const AVALANCHE = "https://github.com/jonastheiler/avalanche-llm/blob/main/";
 const SHINY = "https://github.com/jonastheiler/shiny-k8s-lab/blob/main/";
+const PRIVACY = "https://github.com/jonastheiler/privacy-gateway/blob/main/";
 
 const CARDS = [
   {
@@ -239,5 +240,83 @@ const CARDS = [
     q: "What is the difference between resource requests and limits?",
     a: "Requests are what the scheduler reserves: a pod only lands on a node with that much CPU and memory free. Limits are the ceiling at runtime. A container over its CPU limit is throttled; one over its memory limit is killed (OOMKilled) and restarted. That is why the Shiny app, with R and ggplot2, gets a 1 Gi memory limit.",
     link: SHINY + "k8s/postgres/03-deployment.yaml#L114-L123",
+  },
+  {
+    repo: "privacy-gateway",
+    q: "The local LLM only lists the entities it finds, and plain code replaces them. Why not let the model rewrite the text itself?",
+    a: "A model that rewrites can paraphrase, change an amount or drop a sentence, and the cloud task then works on altered facts. Listing keeps the model's job small and checkable. The replacement is deterministic: only values that occur verbatim in the text are replaced, so an entity the model invented or miscopied changes nothing.",
+    link: PRIVACY + "src/privacy_gateway/llm_redact.py#L44-L56",
+  },
+  {
+    repo: "privacy-gateway",
+    q: "Why are the found entities replaced longest first?",
+    a: "If the model lists both \"Anna Meier\" and \"Meier\", replacing \"Meier\" first turns the full name into \"Anna <PERSON_2>\", and \"Anna Meier\" no longer matches. Longest first, the full name becomes one placeholder, and the surname alone is replaced only where it stands on its own.",
+    link: PRIVACY + "src/privacy_gateway/llm_redact.py#L53-L55",
+  },
+  {
+    repo: "privacy-gateway",
+    q: "What does passing a JSON schema to llama.cpp do, and what happened without it?",
+    a: "llama.cpp turns the schema into a grammar and, at every step, masks the tokens that would break it, so the answer is valid JSON by construction (constrained decoding). Without it, two answers in three didn't parse. An answer that doesn't parse finds no entities, so the whole document leaks: 33% protected instead of 89%, at the same speed.",
+    link: PRIVACY + "src/privacy_gateway/local_llm.py#L11-L27",
+  },
+  {
+    repo: "privacy-gateway",
+    q: "Why does the schema have one required list per entity type instead of a single list of entities?",
+    a: "With one free-form list, the model often stopped after the first name it found: 33% protected on a smoke test of 8 documents. With a required key per type, the grammar walks the model through PERSON, AHV, IBAN, PHONE, EMAIL and ADDRESS in turn, and it has to consider each one: 90% on the same 8. The schema shapes the model's search, not just its output format.",
+    link: PRIVACY + "src/privacy_gateway/llm_redact.py#L22-L28",
+  },
+  {
+    repo: "privacy-gateway",
+    q: "Why is privacy measured as \"is the identifying part still in the text\" rather than by matching predicted entities to labels?",
+    a: "What matters is what reaches the cloud, not whether span boundaries match. A person counts as leaked if the surname is still there, an address if street and number are, a number if its digits are, even reformatted. Matching spans would instead punish harmless boundary differences (\"Frau Graf\" vs \"Graf\") and say nothing about a value that leaks in another format.",
+    link: PRIVACY + "src/privacy_gateway/evaluate.py#L17-L30",
+  },
+  {
+    repo: "privacy-gateway",
+    q: "Why does the evaluation also count \"facts kept\"?",
+    a: "Privacy alone is easy to maximise: redact everything. Then the cloud LLM can't do the task. Amounts, dates and order numbers carry no personal data but are what the task needs, so each method must leave them intact. Every method here kept all 140, so the comparison is about privacy alone, but a stricter prompt or regex could have traded one for the other.",
+    link: PRIVACY + "src/privacy_gateway/evaluate.py#L33-L51",
+  },
+  {
+    repo: "privacy-gateway",
+    q: "Why do the LLM and the regex together protect 99.3%, while each alone gets 89% and 62%?",
+    a: "Their errors don't overlap. The regex is perfect on fixed formats (AHV, IBAN, phone, email) but can't recognise a bare name. The LLM finds names from context, but misses later mentions like \"Frau Graf\" and sometimes miscopies a digit, so its IBAN is ignored. The regex runs after the LLM and catches exactly those.",
+    link: PRIVACY + "src/privacy_gateway/regex_baseline.py#L5-L21",
+  },
+  {
+    repo: "privacy-gateway",
+    q: "On a CPU, 1.7B Q8 takes twice as long per document as 1.7B Q4. Why, and was it worth it?",
+    a: "Generating each token reads every weight from memory once, so on a CPU speed is limited by memory bandwidth, not arithmetic. Q8 stores about twice the bytes per weight of Q4, so it is about twice as slow. It added 3.7 points (89.3% to 93.0%); 4B Q4 added 6 points at 2.5 times the latency. Model size mattered more than quantization: 0.6B never listed an IBAN.",
+    link: PRIVACY + "README.md#results",
+  },
+  {
+    repo: "privacy-gateway",
+    q: "Why numbered placeholders (`<PERSON_1>`) instead of a plain `<PERSON>`?",
+    a: "Numbered placeholders come with a local mapping back to the real values. The cloud LLM copies `<PERSON_1>` into its answer, and the gateway swaps the real name back in, so the answer is usable without the cloud ever seeing the name. A plain `<PERSON>` can't be mapped back, which is why the round trip uses the LLM alone (89.3%), not LLM + regex (99.3%).",
+    link: PRIVACY + "src/privacy_gateway/cloud.py#L61-L65",
+  },
+  {
+    repo: "privacy-gateway",
+    q: "In the round trip, every fact survived, but replies said \"Frau/Herr <surname>\" only 15% of the time instead of 91%. Why, and what would fix it?",
+    a: "`<PERSON_1>` hides the gender, so the cloud LLM falls back to \"Guten Tag Urs Müller\" or \"Liebe/r\". The 15% that kept \"Frau/Herr\" are all documents where the local model left \"Frau Graf\" in the text: the salutation survived only where privacy failed. Gendered placeholders (`<FRAU_1>`) would fix it, at the price of revealing one bit about the person.",
+    link: PRIVACY + "src/privacy_gateway/cloud.py#L90-L93",
+  },
+  {
+    repo: "privacy-gateway",
+    q: "The test documents are synthetic, with valid AHV and IBAN check digits. What does that buy, and what can't it show?",
+    a: "The planted values are the labels, so no manual annotation is needed, and valid check digits make the numbers look like real ones to both the regex and the model. But the 240 documents come from 8 templates, so they are 8 sentence patterns with different values. The results show the approach works, not how well it generalises to freely worded text, especially for names.",
+    link: PRIVACY + "src/privacy_gateway/data.py#L83-L91",
+  },
+  {
+    repo: "privacy-gateway",
+    q: "If every name, number and address is replaced, is the text anonymous?",
+    a: "No. Only direct identifiers are measured. In the medical note the name is hidden, but \"Rückenschmerzen\" still goes to the cloud, and a rare job, date or place can identify someone in combination. Pseudonymization reduces what leaves the machine; it is not anonymization, which would also have to handle these quasi-identifiers and sensitive content.",
+    link: PRIVACY + "README.md#example",
+  },
+  {
+    repo: "privacy-gateway",
+    q: "Why does the local server run in Docker capped at 4 CPUs and 4 GB, with thinking switched off?",
+    a: "The caps simulate a small on-prem box, so the latencies (under 5 s per document for 1.7B Q4) are what such a machine would really deliver, not what a fast laptop does. Qwen3 \"thinks\" before answering by default, which costs many output tokens; on a CPU, at about 25 tokens per second, that would multiply the latency for a task that needs no reasoning.",
+    link: PRIVACY + "compose.yaml#L1-L20",
   },
 ];
