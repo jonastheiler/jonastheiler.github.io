@@ -38,6 +38,8 @@ CMD ["uv", "run", "python", "-m", "myproject"]
   in CI and pushed to ghcr.io.
 - [privacy-gateway](https://github.com/jonastheiler/privacy-gateway): llama.cpp in Docker
   Compose, capped at 4 CPUs and 4 GB RAM.
+- [avalanche-api](https://github.com/jonastheiler/avalanche-api): the 3.4 GB model is baked into the image, and
+  `HF_HUB_OFFLINE=1` makes a missing file fail instead of downloading again. Runs as non-root.
 
 ## Sources
 

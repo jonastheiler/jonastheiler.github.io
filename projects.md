@@ -6,6 +6,8 @@ The projects where I learnt the topics in this wiki.
   forecasts for Lucerne, more accurate than ECMWF, from a self-retraining pipeline.
 - [avalanche-llm](https://github.com/jonastheiler/avalanche-llm): how many labelled
   examples a small open model needs to read Swiss avalanche bulletins like a frontier LLM.
+- [avalanche-api](https://github.com/jonastheiler/avalanche-api): serves the fine-tuned avalanche model as a REST API,
+  with dynamic batching and a load test.
 - [privacy-gateway](https://github.com/jonastheiler/privacy-gateway): a local CPU-only
   LLM strips personal data before text reaches a cloud LLM.
 - [motion-forecast](https://github.com/jonastheiler/motion-forecast): predicts the

@@ -36,6 +36,9 @@ The token counts of an API call are in `message.usage.input_tokens` and
   For Claude this is the API price, and for Qwen the inference time on a T4 at US$0.40 per hour.
 - [privacy-gateway](https://github.com/jonastheiler/privacy-gateway): the median seconds per
   document for each model size and quantization level.
+- [avalanche-api](https://github.com/jonastheiler/avalanche-api): a load test on a laptop CPU gave p50 27 s and p95 58 s.
+  Batching 8 requests added only 10% throughput: prefill is compute-bound and gains nothing,
+  only decode shares the weight reads.
 
 ## Sources
 

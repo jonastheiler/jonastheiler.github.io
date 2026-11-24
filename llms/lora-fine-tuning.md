@@ -39,6 +39,8 @@ model.print_trainable_parameters()
 - [avalanche-llm](https://github.com/jonastheiler/avalanche-llm): Qwen3-1.7B with LoRA on 100,
   300 and 1,000 examples on a free Kaggle T4, about 40 minutes for 1,000. F1 rose from 0.367
   to 0.516 to 0.612, level with Claude Haiku.
+- [avalanche-api](https://github.com/jonastheiler/avalanche-api): the adapter is loaded from the Hub at a pinned commit
+  and merged into the base weights (`merge_and_unload`), so serving runs one plain model.
 - [motion-forecast](https://github.com/jonastheiler/motion-forecast), for contrast: fully
   fine-tuning a small encoder did no better than its frozen embeddings (0.463 vs 0.459), and
   early stopping halted it after 2 epochs.

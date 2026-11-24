@@ -33,6 +33,9 @@ def test_no_feature_from_the_future():
   the HTTP contract of the model in-process, without starting a server.
 - [avalanche-llm](https://github.com/jonastheiler/avalanche-llm): `finetune --smoke` checks the
   GPU setup in a few minutes before the long run.
+- [avalanche-api](https://github.com/jonastheiler/avalanche-api): `create_app(load=...)` swaps in a fake model, so the
+  API tests run in a second without torch. A slow test checks the real model on a known
+  bulletin, alone and in a batch, to catch train/serve skew.
 
 ## Sources
 

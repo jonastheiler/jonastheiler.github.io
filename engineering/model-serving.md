@@ -41,6 +41,9 @@ def predict(motion: dict) -> float:
   The alias is read at start-up.
 - [lucerne-temp](https://github.com/jonastheiler/lucerne_temp): a file instead of an API.
   Forecasts change once a day, so `forecasts/latest.json` serves them.
+- [avalanche-api](https://github.com/jonastheiler/avalanche-api): a FastAPI service for an LLM. The model loads in the
+  lifespan, every answer is parsed into the Pydantic schema (a 502 otherwise), and requests
+  that arrive within 50 ms share one batch.
 
 ## Sources
 

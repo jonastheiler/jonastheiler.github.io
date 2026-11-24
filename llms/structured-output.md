@@ -45,6 +45,8 @@ Bulletin.model_json_schema()           # the schema to hand to a constrained dec
 - [avalanche-llm](https://github.com/jonastheiler/avalanche-llm): without fine-tuning, Qwen
   answered with a list and not JSON, and scored zero. An invalid answer counts as a bulletin
   with no problems.
+- [avalanche-api](https://github.com/jonastheiler/avalanche-api): every answer is validated against the Pydantic schema
+  before it is returned. An invalid one becomes a 502 that includes the raw output.
 
 ## Sources
 

@@ -5,6 +5,7 @@ const LUCERNE = "https://github.com/jonastheiler/lucerne_temp/blob/main/";
 const AVALANCHE = "https://github.com/jonastheiler/avalanche-llm/blob/main/";
 const SHINY = "https://github.com/jonastheiler/shiny-k8s-lab/blob/main/";
 const PRIVACY = "https://github.com/jonastheiler/privacy-gateway/blob/main/";
+const API = "https://github.com/jonastheiler/avalanche-api/blob/main/";
 
 const CARDS = [
   {
@@ -318,5 +319,53 @@ const CARDS = [
     q: "Why does the local server run in Docker capped at 4 CPUs and 4 GB, with thinking switched off?",
     a: "The caps simulate a small on-prem box, so the latencies (under 5 s per document for 1.7B Q4) are what such a machine would really deliver, not what a fast laptop does. Qwen3 \"thinks\" before answering by default, which costs many output tokens; on a CPU, at about 25 tokens per second, that would multiply the latency for a task that needs no reasoning.",
     link: PRIVACY + "compose.yaml#L1-L20",
+  },
+  {
+    repo: "avalanche-api",
+    q: "Why is the model loaded in FastAPI's lifespan instead of inside the request handler?",
+    a: "Loading Qwen3-1.7B and merging the adapter takes far longer than one answer. The lifespan runs once at startup and stores the model on `app.state`, so every request reuses it. `create_app(load=...)` takes the loader as an argument, which lets the tests pass a fake model and run in a second without torch.",
+    link: API + "src/avalanche_api/app.py#L47-L51",
+  },
+  {
+    repo: "avalanche-api",
+    q: "What does the API do when the model's answer doesn't fit the schema?",
+    a: "It never passes unchecked output on. Every answer is parsed with `Bulletin.model_validate_json`. If that fails, the API returns a 502 (the upstream, the model, gave a bad answer) with the raw output, so the caller can see what went wrong. A 422 means the request itself was invalid, and the model never runs.",
+    link: API + "src/avalanche_api/app.py#L73-L82",
+  },
+  {
+    repo: "avalanche-api",
+    q: "Why merge the LoRA adapter into the base weights (`merge_and_unload`) for serving?",
+    a: "The LoRA update is `B·A` added to selected weight matrices. Kept separate, every token pays extra matrix multiplications for the adapter. Adding it into the weights once at startup leaves one plain model with the same answers and no overhead. Separate adapters only pay off when one server switches between several of them.",
+    link: API + "src/avalanche_api/model.py#L30-L34",
+  },
+  {
+    repo: "avalanche-api",
+    q: "The adapter and base model are pulled from the Hugging Face Hub. Why pin them to a commit?",
+    a: "Without a revision, the service loads whatever is newest. A retrained adapter pushed later would silently change the answers of a running API. Pinning both commits makes the model part of the code: changing it is a reviewed diff, and the slow test checks the new answers.",
+    link: API + "src/avalanche_api/model.py#L12-L14",
+  },
+  {
+    repo: "avalanche-api",
+    q: "What is train/serve skew here, and how is it caught?",
+    a: "The API copies the schema and system prompt from avalanche-llm and must build the chat prompt exactly as in training. A drift raises no error; the model just answers worse. The slow test runs the real model on a known bulletin and checks it finds the same problems as in the training repo's evaluation.",
+    link: API + "tests/test_model.py#L1-L24",
+  },
+  {
+    repo: "avalanche-api",
+    q: "How does dynamic batching work, and why pad on the left?",
+    a: "Each request puts its text and a `Future` in a queue. One worker thread takes the first request, waits up to 50 ms for more (up to 8), runs them as one batch and resolves each future. Generation continues at the right end of every row, so shorter prompts are padded on the left; the slow test checks that an answer is identical alone and in a batch.",
+    link: API + "src/avalanche_api/batcher.py#L35-L58",
+  },
+  {
+    repo: "avalanche-api",
+    q: "On a laptop CPU, batching 8 requests raised throughput by only 10%. Why?",
+    a: "Prefill (reading the ~550-token prompt) is limited by compute: 8 prompts take 8 times as long, so batching saves nothing. Decode (writing the answer) is limited by reading the weights from memory once per token, which a batch shares: 3.3 tokens/s alone vs 8.7 for 8. And a batch only finishes with its longest answer. The bigger lever is caching the 372-token system prompt.",
+    link: API + "README.md#load-test",
+  },
+  {
+    repo: "avalanche-api",
+    q: "Why is the `/extract` handler a plain `def` and not `async def`?",
+    a: "The model call blocks until its batch is done. FastAPI runs a plain `def` in a thread pool, so a waiting request doesn't block the event loop, and other requests can arrive and join the same batch. In an `async def`, the blocking call would stall the whole server.",
+    link: API + "src/avalanche_api/app.py#L65-L72",
   },
 ];
