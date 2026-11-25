@@ -6,6 +6,7 @@ const AVALANCHE = "https://github.com/jonastheiler/avalanche-llm/blob/main/";
 const SHINY = "https://github.com/jonastheiler/shiny-k8s-lab/blob/main/";
 const PRIVACY = "https://github.com/jonastheiler/privacy-gateway/blob/main/";
 const API = "https://github.com/jonastheiler/avalanche-api/blob/main/";
+const MOTION = "https://github.com/jonastheiler/motion-forecast/blob/main/";
 
 const CARDS = [
   {
@@ -367,5 +368,83 @@ const CARDS = [
     q: "Why is the `/extract` handler a plain `def` and not `async def`?",
     a: "The model call blocks until its batch is done. FastAPI runs a plain `def` in a thread pool, so a waiting request doesn't block the event loop, and other requests can arrive and join the same batch. In an `async def`, the blocking call would stall the whole server.",
     link: API + "src/avalanche_api/app.py#L65-L72",
+  },
+  {
+    repo: "motion-forecast",
+    q: "The training set is cut by when a Motion was answered, the validation and test sets by when it was submitted. Why the difference?",
+    a: "A model trained on 1 January only knows the answers given before that day, so training uses only Motionen answered by then. Validation and test are what the model would have been asked about: Motionen submitted after the cutoff. A Motion submitted in December and answered in January belongs to no training set, because its answer wasn't known yet.",
+    link: MOTION + "src/motion_forecast/train.py#L52-L66",
+  },
+  {
+    repo: "motion-forecast",
+    q: "Why does training start in 2007 when the data goes back to 1990?",
+    a: "The Federal Council's acceptance rate drifted from about 60% in the late 1990s to about 20% since 2015. Old Motionen would teach the model a base rate and patterns that no longer hold, and its probabilities would be too high. Starting in 2007 trades some data for data that looks like today.",
+    link: MOTION + "src/motion_forecast/train.py#L43-L45",
+  },
+  {
+    repo: "motion-forecast",
+    q: "Why is the main metric log loss and not accuracy?",
+    a: "With 80% rejected, \"always reject\" is 80% accurate and useless. The model's output is a probability, and log loss scores it, punishing confident mistakes hardest. Brier score is the squared error of the probability, PR-AUC shows how well the rare accepts are found, and ROC-AUC how well accepts are ranked above rejects.",
+    link: MOTION + "src/motion_forecast/train.py#L69-L76",
+  },
+  {
+    repo: "motion-forecast",
+    q: "The classes are 80/20, yet the logistic regression gets no class weights. Why?",
+    a: "Class weights make the rare class count more in training, which pushes the predicted probabilities for \"accept\" up. That can help a yes/no decision, but it breaks calibration: a forecast of 30% should come true 30% of the time. Log loss measures exactly that, so the model is trained on the data as it is.",
+    link: MOTION + "src/motion_forecast/models.py#L65-L68",
+  },
+  {
+    repo: "motion-forecast",
+    q: "What is the model ladder, and what did it show?",
+    a: "Each stage adds one source of information to the one before: the base rate, then the metadata (party, council, type, department), the text, both, and sentence embeddings. The gaps between stages show what each source is worth. Metadata alone (0.431) beat the text alone (0.444): who asks matters more than what they ask. Committee Motionen are accepted half the time, SVP ones 9%. Text + metadata was best (0.413).",
+    link: MOTION + "src/motion_forecast/models.py#L1-L12",
+  },
+  {
+    repo: "motion-forecast",
+    q: "Why did TF-IDF word counts beat the vectors of a pretrained language model (multilingual-e5)?",
+    a: "The language model was never trained for this task. Its one vector per text sums up what the text is about, and the classifier can only use that summary. TF-IDF keeps every term as its own feature, so the classifier can learn that a particular word signals acceptance. The embedding stages are also not deployable: they need a 470 MB model at prediction time.",
+    link: MOTION + "README.md#results",
+  },
+  {
+    repo: "motion-forecast",
+    q: "Fine-tuning the language model on the labels did no better than its frozen vectors (0.463 vs 0.459). Why?",
+    a: "With about 15k labelled texts, its 118M weights found no signal that the word counts and frozen vectors miss. More epochs fitted the training years ever closer, and validation chose to stop after 2 epochs, when it began to memorise them. A bigger model is not a better one when the task's signal is mostly in who asks.",
+    link: MOTION + "src/motion_forecast/finetune.py#L105-L112",
+  },
+  {
+    repo: "motion-forecast",
+    q: "The data gives each member's current party, not the party at submission. Why is that a problem, and how is it handled?",
+    a: "A member who switched parties appears under the new one, even for Motionen submitted before: the input uses information from later than the Motion. Mergers would also split one party into old and new names (CVP and BDP became Die Mitte in 2021). The code maps merged parties to today's name, which makes old and new Motionen comparable; party switchers remain a small source of leakage.",
+    link: MOTION + "src/motion_forecast/data.py#L31-L47",
+  },
+  {
+    repo: "motion-forecast",
+    q: "How is each stage trained and scored, and why that order?",
+    a: "Each stage is one MLflow run. Inside it, one nested run per hyperparameter setting trains on 2007-2018 and scores on 2019-2022. The best setting is retrained on 2007-2022 and scored once on 2023 onwards. Choosing on validation keeps the test set an honest final check; retraining on all known data uses the most recent years.",
+    link: MOTION + "src/motion_forecast/train.py#L118-L136",
+  },
+  {
+    repo: "motion-forecast",
+    q: "Why does the project log to MLflow by hand instead of using `mlflow.sklearn.autolog()`?",
+    a: "After every fit, autolog scores the training data and draws ROC, PR and confusion plots, which made each run about 7 times slower. Training scores say little about a model. Logging by hand records only what matters: parameters, held-out metrics, a digest of the data, a calibration plot and a per-party table.",
+    link: MOTION + "src/motion_forecast/train.py#L184-L186",
+  },
+  {
+    repo: "motion-forecast",
+    q: "The registered model is a pyfunc that wraps the pipeline together with `inputs()`. Why not register the sklearn pipeline itself?",
+    a: "The pipeline expects features that `inputs()` builds from a raw Motion. If callers built them themselves, they could build them differently from training (training-serving skew). The pyfunc takes the Motion as it comes from the parliament, so preprocessing can't drift. Its environment lists only four packages; by default MLflow copied the whole lock file, PyTorch included.",
+    link: MOTION + "src/motion_forecast/models.py#L106-L117",
+  },
+  {
+    repo: "motion-forecast",
+    q: "Every training registers a new model version, but only one carries the `champion` alias. How is it decided?",
+    a: "The deployable stage with the best validation score is registered. It takes the alias only if its test log loss beats the current champion's, which is comparable because both are scored on the same test period. Callers load `models:/motion-forecast@champion`, so a worse model never replaces a better one, and every version stays available.",
+    link: MOTION + "src/motion_forecast/train.py#L160-L173",
+  },
+  {
+    repo: "motion-forecast",
+    q: "How do the live forecasts prove they were made before the answer, and how do they show that the model has gone stale?",
+    a: "`forecasts.csv` is only ever appended to, and each run commits and pushes it, so git timestamps every forecast before the Federal Council answers. Later runs score the answered forecasts and log the live log loss next to the champion's test log loss. When the live score climbs well above the test score, it's time to retrain.",
+    link: MOTION + "src/motion_forecast/forecast.py#L84-L112",
   },
 ];
