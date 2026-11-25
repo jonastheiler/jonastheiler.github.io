@@ -120,7 +120,13 @@
 
 		function show(card) {
 			current = card;
+			// Turn the card back without the animation: otherwise the next card's answer
+			// shows while it rotates.
+			const inner = $("card").querySelector(".inner");
+			inner.style.transition = "none";
 			$("card").classList.remove("flipped");
+			inner.offsetWidth;  // apply the turn before the transition comes back
+			inner.style.transition = "";
 			$("grade").hidden = true;
 			const tag = `${card.repo} · box ${box(card)} of ${BOXES}`;
 			$("front-tag").textContent = tag;
@@ -129,8 +135,9 @@
 			$("answer").innerHTML = format(card.a);
 			$("link").href = card.link;
 			const cards = deck();
-			const learned = cards.filter(c => box(c) === BOXES).length;
-			$("status").textContent = `${cards.length} cards · ${learned} in the top box`;
+			// Cards per box, so "Knew it" visibly moves a card up.
+			const counts = Array.from({ length: BOXES }, (_, i) => cards.filter(c => box(c) === i + 1).length);
+			$("status").textContent = `${cards.length} cards · boxes 1–${BOXES}: ${counts.join(" · ")}`;
 		}
 
 		function flip() {
