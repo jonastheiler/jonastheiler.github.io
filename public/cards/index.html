@@ -135,9 +135,9 @@
 			$("answer").innerHTML = format(card.a);
 			$("link").href = card.link;
 			const cards = deck();
-			// Cards per box, so "Knew it" visibly moves a card up.
-			const counts = Array.from({ length: BOXES }, (_, i) => cards.filter(c => box(c) === i + 1).length);
-			$("status").textContent = `${cards.length} cards · boxes 1–${BOXES}: ${counts.join(" · ")}`;
+			// A card counts as known once it has left box 1, i.e. its last answer was "Knew it".
+			const known = cards.filter(c => box(c) > 1).length;
+			$("status").textContent = `${known} of ${cards.length} known`;
 		}
 
 		function flip() {
